@@ -1,0 +1,10 @@
+package cn.edu.zucc.personplan.model;
+
+import java.util.Date;
+
+public class BeanUser {
+	Date register_time;
+	String user_id;
+	public static BeanUser currentLoginUser=null;
+
+}

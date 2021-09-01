@@ -1,0 +1,129 @@
+package cn.edu.zucc.personplan.comtrol.example;
+
+import java.sql.Connection;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+
+import cn.edu.zucc.personplan.itf.IPlanManager;
+import cn.edu.zucc.personplan.model.BeanPlan;
+import cn.edu.zucc.personplan.model.BeanUser;
+import cn.edu.zucc.personplan.util.BaseException;
+import cn.edu.zucc.personplan.util.BusinessException;
+import cn.edu.zucc.personplan.util.DBUtil;
+import cn.edu.zucc.personplan.util.DbException;
+
+public class ExamplePlanManager implements IPlanManager {
+
+	@Override
+	public BeanPlan addPlan(String name) throws BaseException {
+		// TODO Auto-generated method stub
+
+		System.out.println("判断计划名字");
+	    if(name==null || "".equals(name)) throw new BusinessException("计划名称必须提供");
+		//首先需要查找是否有同名的计划,由于不能重名,如果已经存在,则报错,如果不存在在,则去找到当前最大序号,添加行记录,name是计划名称
+		Connection connection =null;
+		try {
+			String maxOrdIndex ;
+			String currentUserid = BeanUser.currentLoginUser.getUser_id();
+			connection=DBUtil.getConnection();
+			//
+			String sqlString = "select * from tbl_plan where user_id=? and plan_name=?";
+			java.sql.PreparedStatement pStatement = connection.prepareStatement(sqlString);
+
+			pStatement.setString(1, currentUserid);//此处没有beanUser但是currentUser静态变量存储量当前用户
+			pStatement.setString(2, name);
+			java.sql.ResultSet rs = pStatement.executeQuery();
+			if(rs.next()) {
+				pStatement.close();
+				rs.close();
+				throw new BusinessException("同名计划已经存在");
+			}
+			pStatement.close();
+			rs.close();
+			
+			sqlString = "select max(plan_ord) from tbl_plan where user_id = ? ";
+			pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, currentUserid);
+			rs = pStatement.executeQuery();
+			
+			if(rs.next()) {
+				maxOrdIndex = rs.getString(1)+1;
+			} else {
+				maxOrdIndex = 1;
+				//因为找不到记录表示没有记录那么当前为第一条记录,throw new BusinessException("没找到最大序号,可能是不存在记录");
+			}
+			pStatement.close();
+			rs.close();
+			
+			sqlString = " insert into tbl_plan(user_id,plan_order,plan_name,create_time,step_count,start_step_count,finished_step_count)"
+					+ " values(?,?,?,?,0,0,0) ";
+			pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, currentUserid);
+			pStatement.setString(2, maxOrdIndex);
+			pStatement.setString(3, name);
+			pStatement.setTimestamp(4, new java.sql.Timestamp(System.currentTimeMillis()));
+			rs=pStatement.executeQuery();
+			BeanPlan beanPlan=new BeanPlan();
+			beanPlan.
+			
+			return beanPlan;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public List<BeanPlan> loadAll() throws BaseException {
+		List<BeanPlan> result=new ArrayList<BeanPlan>();
+		
+		
+		Connection connection =null;
+		try {
+			connection=DBUtil.getConnection();
+			String sqlString = " select plan_id,user_id,plan_order,plan_name,create_time,step_count,start_step_count,finished_step_count "
+					+ " from tbl_plan where user_id = ? order by plan_ord ";
+			java.sql.PreparedStatement pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, BeanUser.currentLoginUser.getUser_id());//此处没有beanUser但是currentUser静态变量存储量当前用户?
+			java.sql.ResultSet rs = pStatement.executeQuery();
+			while(rs.next()) {
+				BeanPlan bPlan = new BeanPlan();
+				result.add(bPlan);
+			}
+			return result;
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void deletePlan(BeanPlan plan) throws BaseException {
+		
+	}
+
+}

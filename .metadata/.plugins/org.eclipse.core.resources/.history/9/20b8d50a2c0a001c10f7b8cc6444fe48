@@ -1,0 +1,88 @@
+package cn.edu.zucc.personplan.comtrol.example;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+import cn.edu.zucc.personplan.itf.IStepManager;
+import cn.edu.zucc.personplan.model.BeanPlan;
+import cn.edu.zucc.personplan.model.BeanStep;
+import cn.edu.zucc.personplan.model.BeanUser;
+import cn.edu.zucc.personplan.util.BaseException;
+import cn.edu.zucc.personplan.util.BusinessException;
+import cn.edu.zucc.personplan.util.DBUtil;
+import cn.edu.zucc.personplan.util.DbException;
+
+public class ExampleStepManager implements IStepManager {
+
+	@Override
+	public void add(BeanPlan plan, String name, String planstartdate,
+			String planfinishdate) throws BaseException {
+		
+		
+	}
+
+	@Override
+	public List<BeanStep> loadSteps(BeanPlan plan) throws BaseException {
+		List<BeanStep> result=new ArrayList<BeanStep>();
+		BeanStep p=new BeanStep();
+		result.add(p);
+		return result;
+	}
+
+	@Override
+	public void deleteStep(BeanStep step) throws BaseException {
+		// TODO Auto-generated method stub
+		
+		Connection connection = null;
+		try {
+			connection = DBUtil.getConnection();
+			String sqlString = "select count(*) from tbl_step where plan_id= " + plan_id;
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement.executeQuery(sqlString);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+		
+	}
+
+	@Override
+	public void startStep(BeanStep step) throws BaseException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void finishStep(BeanStep step) throws BaseException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void moveUp(BeanStep step) throws BaseException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void moveDown(BeanStep step) throws BaseException {
+		// TODO Auto-generated method stub
+		
+	}
+
+}

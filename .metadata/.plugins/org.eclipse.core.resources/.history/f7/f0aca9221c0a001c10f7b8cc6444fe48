@@ -1,0 +1,57 @@
+package cn.edu.zucc.personplan.comtrol.example;
+
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import cn.edu.zucc.personplan.itf.IPlanManager;
+import cn.edu.zucc.personplan.model.BeanPlan;
+import cn.edu.zucc.personplan.model.BeanUser;
+import cn.edu.zucc.personplan.util.BaseException;
+import cn.edu.zucc.personplan.util.BusinessException;
+import cn.edu.zucc.personplan.util.DBUtil;
+import cn.edu.zucc.personplan.util.DbException;
+
+public class ExamplePlanManager implements IPlanManager {
+
+	@Override
+	public BeanPlan addPlan(String name) throws BaseException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<BeanPlan> loadAll() throws BaseException {
+		List<BeanPlan> result=new ArrayList<BeanPlan>();
+		
+		
+		Connection connection =null;
+		try {
+			connection=DBUtil.getConnection();
+			BeanPlan p=new BeanPlan();
+			result.add(p);
+			return result;
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void deletePlan(BeanPlan plan) throws BaseException {
+		
+	}
+
+}

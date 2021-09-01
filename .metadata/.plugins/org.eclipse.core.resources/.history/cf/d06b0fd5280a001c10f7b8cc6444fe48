@@ -1,0 +1,210 @@
+package cn.edu.zucc.personplan.comtrol.example;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.query.criteria.internal.expression.function.CurrentTimeFunction;
+
+import cn.edu.zucc.personplan.itf.IPlanManager;
+import cn.edu.zucc.personplan.model.BeanPlan;
+import cn.edu.zucc.personplan.model.BeanUser;
+import cn.edu.zucc.personplan.util.BaseException;
+import cn.edu.zucc.personplan.util.BusinessException;
+import cn.edu.zucc.personplan.util.DBUtil;
+import cn.edu.zucc.personplan.util.DbException;
+
+public class ExamplePlanManager implements IPlanManager {
+
+	@Override
+	public BeanPlan addPlan(String name) throws BaseException {
+		// TODO Auto-generated method stub
+
+		System.out.println("判断计划名字");
+	    if(name==null || "".equals(name)) throw new BusinessException("计划名称必须提供");
+		//首先需要查找是否有同名的计划,由于不能重名,如果已经存在,则报错,如果不存在在,则去找到当前最大序号,添加行记录,name是计划名称
+		Connection connection =null;
+		try {
+			int maxOrdIndex ;
+			String currentUserid = BeanUser.currentLoginUser.getUser_id();
+			connection=DBUtil.getConnection();
+			//
+			String sqlString = "select * from tbl_plan where user_id=? and plan_name=?";
+			java.sql.PreparedStatement pStatement = connection.prepareStatement(sqlString);
+
+			pStatement.setString(1, currentUserid);//此处没有beanUser但是currentUser静态变量存储量当前用户
+			pStatement.setString(2, name);
+			java.sql.ResultSet rs = pStatement.executeQuery();
+			if(rs.next()) {
+				pStatement.close();
+				rs.close();
+				throw new BusinessException("同名计划已经存在");
+			}
+			pStatement.close();
+			rs.close();
+			
+			sqlString = "select max(plan_order) from tbl_plan where user_id = ? ";
+			pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, currentUserid);
+			rs = pStatement.executeQuery();
+			
+			if(rs.next()) {
+				maxOrdIndex = rs.getInt(1)+1;
+			} else {
+				maxOrdIndex = 1;
+				//因为找不到记录表示没有记录那么当前为第一条记录,throw new BusinessException("没找到最大序号,可能是不存在记录");
+			}
+			pStatement.close();
+			rs.close();
+			
+			sqlString = " insert into tbl_plan(user_id,plan_order,plan_name,create_time,step_count,start_step_count,finished_step_count)"
+					+ " values(?,?,?,?,0,0,0) ";
+			pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, currentUserid);
+			pStatement.setInt(2, maxOrdIndex);
+			pStatement.setString(3, name);
+			java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
+			pStatement.setTimestamp(4, timestamp);
+			pStatement.execute();
+			BeanPlan beanPlan=new BeanPlan();
+			beanPlan.setPlan_nameString(name);
+			beanPlan.setPlan_order(maxOrdIndex);
+			beanPlan.setUser_idString(currentUserid);
+			beanPlan.setCreate_timeDate(timestamp);
+			beanPlan.setStep_count(0);
+			beanPlan.setStart_step_count(0);
+			beanPlan.setFinished_step_count(0);
+			sqlString = "select max(plan_id) from tbl_plan where user_id = ?";
+			pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, currentUserid);
+			rs = pStatement.executeQuery();
+			if(rs.next()) {
+				beanPlan.setPlan_id(rs.getInt(1));
+			}
+			
+			return beanPlan;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public List<BeanPlan> loadAll() throws BaseException {
+		List<BeanPlan> result=new ArrayList<BeanPlan>();
+		
+		
+		Connection connection =null;
+		try {
+			connection=DBUtil.getConnection();
+			String sqlString = " select plan_id,user_id,plan_order,plan_name,create_time,step_count,start_step_count,finished_step_count "
+					+ " from tbl_plan where user_id = ? order by plan_order ";
+			java.sql.PreparedStatement pStatement = connection.prepareStatement(sqlString);
+			pStatement.setString(1, BeanUser.currentLoginUser.getUser_id());//此处没有beanUser但是currentUser静态变量存储量当前用户?
+			java.sql.ResultSet rs = pStatement.executeQuery();
+			while(rs.next()) {
+				BeanPlan bPlan = new BeanPlan();
+				bPlan.setPlan_id(rs.getInt(1));
+				bPlan.setUser_idString(rs.getString(2));
+				bPlan.setPlan_order(rs.getInt(3));
+				bPlan.setPlan_nameString(rs.getString(4));
+				bPlan.setCreate_timeDate(rs.getTimestamp(5));
+				bPlan.setStep_count(rs.getInt(6));
+				bPlan.setStart_step_count(rs.getInt(7));
+				bPlan.setFinished_step_count(rs.getInt(8));
+				result.add(bPlan);
+			}
+			return result;
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void deletePlan(BeanPlan plan) throws BaseException {
+		Connection connection = null;
+		int plan_id=plan.getPlan_id();
+		try {
+			connection = DBUtil.getConnection();
+			String sqlString = "select count(*) from tbl_step where plan_id= " + plan_id;
+			Statement statement = connection.createStatement();
+			ResultSet resultSet = statement.executeQuery(sql);
+			//存在步骤,不能删除
+			if (resultSet.next()) {
+				if (resultSet.getInt(1) > 0) {
+					resultSet.close();
+					statement.close();
+					throw new BusinessException("该计划已经存在步骤,不能删除");
+				}
+			}
+			resultSet.close();
+			statement.close();
+			// 找到
+			sqlString = "select plan_order,user_id from tbl_plan where plan_id=" + plan_id;
+			resultSet = statement.executeQuery(sqlString);
+			int plan_ord = 0;
+			String plan_user_id = null;
+			if (resultSet.next()) {
+				plan_ord = resultSet.getInt(1);
+				plan_user_id = resultSet.getString(2);
+			} else {
+				throw new BusinessException("该计划不存在");
+			}
+			// 如果必须是自己的计划
+			if (!BeanUser.currentLoginUser.getUser_id().equals(plan_user_id)) {
+				throw new BusinessException("不能删除别人的计划");
+			}
+			//
+			sqlString = "delete from tbl_plan where plan_id=" + plan_id;
+			statement.execute(sqlString);
+			sqlString = "update tbl_plan set plan_order = plan_order - 1 where user_id=? and plan_order>" + plan_ord;
+			PreparedStatement pst = connection.prepareStatement(upSqlString);
+			pst.setString(1, plan_user_id);
+			pst.execute();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			throw new DbException(e);
+		}finally {
+			if(connection!=null) {
+				try {
+					connection.close();
+				} catch (Exception e2) {
+					// TODO: handle exception
+					e2.printStackTrace();
+				}
+			}
+		}
+	}
+	}
+
+}
